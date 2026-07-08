@@ -1,0 +1,17 @@
+{
+    "name": "mawufemor/techandfun",
+    "description": "Simple mvc application",
+    "type": "project",
+    "autoload": {
+        "psr-4": {
+            "Mawufemor\\Techandfun\\": "app/"
+        }
+    },
+    "authors": [
+        {
+            "name": "I-am-mawufemor",
+            "email": "norbert.mawufemor@gmail.com"
+        }
+    ],
+    "require": {}
+}
