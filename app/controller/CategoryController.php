@@ -10,6 +10,7 @@ if (!defined('ROOT')) {
 
 
 use PDO;
+use Mawufemor\Techandfun\Helpers\SlugHelper;
 
 class CategoryController
 {
@@ -30,7 +31,7 @@ class CategoryController
     // Show create form
     public function create(): void
     {
-       
+
 
         if (!isset($_SESSION['user_id'])) {
             header("Location: ?page=login");
@@ -43,7 +44,7 @@ class CategoryController
     // Handle create form submission
     public function store(): void
     {
-   if (!isset($_SESSION['user_id'])) {
+        if (!isset($_SESSION['user_id'])) {
             header("Location: ?page=login");
             exit();
         }
@@ -52,7 +53,7 @@ class CategoryController
 
         header('Content-Type: application/json');
 
-        
+
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             http_response_code(405);
             echo json_encode(['success' => false, 'message' => 'Invalid request method.']);
@@ -69,7 +70,7 @@ class CategoryController
             exit;
         }
 
-        $slug = $this->generateSlug($name);
+        $slug = SlugHelper::generate($name);
 
         // Check if category already exists
         if ($this->categoryModel->getByName($name)) {
@@ -90,40 +91,68 @@ class CategoryController
     // Show edit form
     public function edit(int $id): void
     {
+        if (!isset($_SESSION['user_id'])) {
+            header("Location: ?page=login");
+            exit();
+        }
+
         requireAdmin();
 
         $category = $this->categoryModel->getById($id);
 
         if (!$category) {
-            $_SESSION['error'] = "Category not found.";
-            header("Location: /admin/categories");
+            echo json_encode(['success' => false, 'message' => 'Category not found.']);
             exit;
         }
 
-        require ROOT . '/app/views/admin/categories/edit.php';
+        require ROOT . '/app/view/admin/categories/edit.php';
     }
 
     // Handle edit form submission
     public function update(int $id): void
     {
+        if (!isset($_SESSION['user_id'])) {
+            header("Location: ?page=login");
+            exit();
+        }
         requireAdmin();
 
-        $name = trim($_POST['name'] ?? '');
-        $slug = $this->generateSlug($name);
+        header('Content-Type: application/json');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['success' => false, 'message' => 'Invalid request method.']);
+            exit;
+        }
+        // validate CSRF token
+        if (!validateCSRF($_POST['csrf_token'] ?? '')) {
+            echo json_encode(['success' => false, 'message' => 'Invalid CSRF token.']);
+            exit;
+        }
+
+        $name = trim($_POST['category_name'] ?? '');
+
 
         if (empty($name)) {
-            $_SESSION['error'] = "Category name is required.";
-            header("Location: /admin/categories/edit/{$id}");
+            echo json_encode(['success' => false, 'message' => 'All fields are required.']);
+            exit;
+        }
+
+        $slug = SlugHelper::generate($name);
+
+        // Check if category already exists (excluding the current category)
+        $existingCategory = $this->categoryModel->getByName($name);
+        if ($existingCategory && (int)$existingCategory['id'] !== $id) {
+            echo json_encode(['success' => false, 'message' => 'Category already exists.']);
             exit;
         }
 
         if ($this->categoryModel->update($id, $name, $slug)) {
-            $_SESSION['success'] = "Category updated successfully.";
+            echo json_encode(['success' => true, 'message' => 'Category updated successfully.']);
         } else {
-            $_SESSION['error'] = "Failed to update category.";
+            echo json_encode(['success' => false, 'message' => 'Failed to update category.']);
         }
 
-        header("Location: /admin/categories");
         exit;
     }
 
@@ -133,20 +162,14 @@ class CategoryController
         requireAdmin();
 
         if ($this->categoryModel->delete($id)) {
-            $_SESSION['success'] = "Category deleted successfully.";
+            echo json_encode(['success' => true, 'message' => 'Category deleted successfully.']);
         } else {
-            $_SESSION['error'] = "Failed to delete category.";
+            echo json_encode(['success' => false, 'message' => 'Failed to delete category.']);
         }
 
-        header("Location: /admin/categories");
         exit;
     }
 
     // Auto-generate slug from name
-    private function generateSlug(string $name): string
-    {
-        return strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $name), '-'));
-    }
 
-    
 }

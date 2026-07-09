@@ -64,9 +64,34 @@ switch ($page) {
     case 'create-categories':
         $categoryController->create();
         break;
-        
+
     case 'store-category':
         $categoryController->store();
+        break;
+
+    case 'edit-category':
+        $id = filter_var($_GET['id'] ?? null, FILTER_VALIDATE_INT);
+        if ($id === false || $id === null) {
+            $_SESSION['error'] = "Invalid category ID.";
+            header("Location: ?page=categories");
+            exit;
+        }
+        $categoryController->edit($id);
+        break;
+
+
+    case 'update-category':
+        $id = filter_var($_GET['id'] ?? null, FILTER_VALIDATE_INT);
+        if ($id === false || $id === null) {
+            $_SESSION['error'] = "Invalid category ID.";
+            header("Location: ?page=categories");
+            exit;
+        }
+        $categoryController->update($id);
+        break;
+
+    case 'admin-dashboard':
+        $userController->login();
         break;
 
     default:

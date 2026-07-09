@@ -4,6 +4,7 @@
 $page_title = "Categories | " . APP_NAME;
 require_once __DIR__ . "/../../../include/header.php";
 require_once __DIR__ . "/../../../include/navbar.php";
+generateCSRF();
 ?>
 
 <section id="main">

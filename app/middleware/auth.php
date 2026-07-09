@@ -10,6 +10,8 @@ function requireLogin() {
 function requireAdmin() {
     if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
         http_response_code(403);
-        exit("403 - Access Denied");
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Access denied.']);
+        exit;
     }
 }

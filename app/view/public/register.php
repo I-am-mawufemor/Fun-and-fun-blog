@@ -2,6 +2,7 @@
 $page_title = "Register | " . APP_NAME;
 require_once __DIR__ . "/../../include/header.php";
 require_once __DIR__ . "/../../include/navbar.php";
+generateCSRF();
 ?>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.19/css/intlTelInput.min.css">
