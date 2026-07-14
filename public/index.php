@@ -19,6 +19,7 @@ require_once ROOT . '/app/controller/UserController.php';
 
 use Mawufemor\Techandfun\controller\UserController;
 use Mawufemor\Techandfun\controller\CategoryController;
+use Mawufemor\Techandfun\controller\PostController;
 
 
 $pdo = Database::getInstance();
@@ -26,6 +27,8 @@ $pdo = Database::getInstance();
 
 $userController = new UserController($pdo);
 $categoryController = new CategoryController($pdo);
+$postController = new PostController($pdo);
+
 
 // function to check if user is logged in
 function isLoggedIn()
@@ -90,9 +93,38 @@ switch ($page) {
         $categoryController->update($id);
         break;
 
+
+    case 'delete-category':
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            exit('Invalid request method.');
+        }
+
+        $id = filter_var($_GET['id'] ?? null, FILTER_VALIDATE_INT);
+        if ($id === false || $id === null) {
+            $_SESSION['error'] = "Invalid category ID.";
+            header("Location: ?page=categories");
+            exit;
+        }
+        $categoryController->delete($id);
+        break;
+
     case 'admin-dashboard':
         $userController->login();
         break;
+
+    case 'posts':
+        $postController->index();
+        break;
+
+    case 'create-post':
+        $postController->create();
+        break;
+
+    case 'store-post':
+        $postController->store();
+        break;
+        
 
     default:
         http_response_code(404);

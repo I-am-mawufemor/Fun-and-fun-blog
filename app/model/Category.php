@@ -1,6 +1,6 @@
 <?php
 
-namespace Mawufemor\Techandfun\Model;
+namespace Mawufemor\Techandfun\model;
 
 if (!defined('ROOT')) {
     die("Direct access not allowed");
@@ -53,5 +53,12 @@ class Category
         $stmt = $this->pdo->prepare("SELECT * FROM categories WHERE UPPER(name) = UPPER(?)");
         $stmt->execute([$name]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function exists(int $id): bool
+    {
+        $stmt = $this->pdo->prepare('SELECT 1 FROM categories WHERE id = ? LIMIT 1');
+        $stmt->execute([$id]);
+        return (bool) $stmt->fetchColumn();
     }
 }

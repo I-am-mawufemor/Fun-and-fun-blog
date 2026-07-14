@@ -943,6 +943,66 @@ input[type="tel"] {
     display: flex;
 }
 
+.char-row {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    font-size: 0.85rem;
+    color: #6b7280;
+}
+
+.field-hint {
+    color: #6b7280;
+}
+
+.char-count {
+    font-variant-numeric: tabular-nums;
+}
+
+.req {
+    color: #dc3545;
+}
+
+.layout-form-group textarea {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    transition: 0.3s;
+    resize: vertical;
+    font-family: inherit;
+}
+
+.layout-form-group textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.layout-form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.layout-form-group select {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    transition: 0.3s;
+    background: #fff;
+    cursor: pointer;
+}
+
+.layout-form-group select:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+
+
 /* Buttons */
 .btn {
     display: inline-flex;
@@ -1032,6 +1092,125 @@ input[type="tel"] {
     padding: 0;
 }
 
+/* Modal Overlay - full screen dim background */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.modal-overlay.active {
+    display: flex;
+    opacity: 1;
+}
+
+/* Modal box */
+.modal {
+    background: #fff;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 480px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    transform: translateY(-20px);
+    transition: transform 0.2s ease;
+}
+
+.modal-overlay.active .modal {
+    transform: translateY(0);
+}
+
+.modal-sm {
+    max-width: 400px;
+}
+
+/* Modal header */
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+    color: #666;
+    padding: 0.25rem;
+}
+
+.modal-close:hover {
+    color: #000;
+}
+
+/* Modal body */
+.modal-body {
+    padding: 1.5rem;
+}
+
+.delete-msg {
+    margin: 0;
+    color: #333;
+    line-height: 1.5;
+}
+
+/* Modal footer */
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e5e5e5;
+}
+
+/* Buttons */
+.btn-cancel {
+    background: #f0f0f0;
+    color: #333;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.btn-cancel:hover {
+    background: #e0e0e0;
+}
+
+.btn-confirm-delete {
+    background: #dc3545;
+    color: #fff;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.btn-confirm-delete:hover {
+    background: #c82333;
+}
 /* Responsive: stack cards on smaller screens */
 @media (max-width: 900px) {
     .layout {
@@ -1044,3 +1223,4 @@ input[type="tel"] {
         flex: none;
     }
 }
+

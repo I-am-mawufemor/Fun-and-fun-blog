@@ -1,17 +1,18 @@
 <?php
 
-function requireLogin() {
+function requireLogin(): void
+{
     if (!isset($_SESSION['user_id'])) {
         header("Location: index.php?page=login");
         exit;
     }
 }
 
-function requireAdmin() {
-    if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
+function requireRole(string $role): void
+{
+    if (!isset($_SESSION['role']) || $_SESSION['role'] !== $role) {
         http_response_code(403);
-        header('Content-Type: application/json');
-        echo json_encode(['success' => false, 'message' => 'Access denied.']);
+        require ROOT . '/app/view/errors/403.php';
         exit;
     }
 }

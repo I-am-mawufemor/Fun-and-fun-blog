@@ -1,6 +1,6 @@
 <?php
 
-namespace Mawufemor\Techandfun\Helpers;
+namespace Mawufemor\Techandfun\helpers;
 
 class SlugHelper
 {
@@ -8,4 +8,5 @@ class SlugHelper
     {
         return strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $name), '-'));
     }
+
 }

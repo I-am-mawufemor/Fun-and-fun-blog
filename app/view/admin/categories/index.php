@@ -48,11 +48,14 @@ generateCSRF();
                                         <td><?= htmlspecialchars($category['slug']); ?></td>
                                         <td>
                                             <div class="table-actions">
-                                                <a href="?page=edit-category&id=<?= $category['id']; ?>" class="btn btn-edit">Edit</a>
-                                                <form action="?page=delete-category&id=<?= $category['id']; ?>" method="POST">
-                                                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']); ?>">
-                                                    <button type="submit" class="btn btn-delete" onclick="return confirm('Are you sure you want to delete this category?');">Delete</button>
-                                                </form>
+                                                <a href="?page=edit-category&id=<?= htmlspecialchars($category['id']); ?>" class="btn btn-edit">Edit</a>
+
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-delete"
+                                                    onclick="openDeleteModal('<?= htmlspecialchars($category['id']); ?>', '<?= htmlspecialchars($category['name'], ENT_QUOTES); ?>')">
+                                                    Delete
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -74,3 +77,41 @@ generateCSRF();
         </div>
     </div>
 </section>
+
+<!-- Single shared delete modal (outside the loop) -->
+<div class="modal-overlay" id="deleteModalOverlay">
+    <div class="modal modal-sm">
+        <div class="modal-header">
+            <h3>Confirm Delete</h3>
+            <button type="button" class="modal-close" onclick="closeModal('deleteModalOverlay')">✕</button>
+        </div>
+
+        <form id="deleteCategoryForm" action="" method="POST">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']); ?>">
+
+            <div class="modal-body">
+                <p class="delete-msg">
+                    Are you sure you want to delete <strong id="delete_category_name"></strong>?
+                    This action cannot be undone.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="closeModal('deleteModalOverlay')">Cancel</button>
+                <button type="submit" class="btn-confirm-delete">Yes, Delete</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openDeleteModal(id, name) {
+        const form = document.getElementById('deleteCategoryForm');
+        form.action = '?page=delete-category&id=' + encodeURIComponent(id);
+        document.getElementById('delete_category_name').textContent = name;
+        document.getElementById('deleteModalOverlay').classList.add('active');
+    }
+
+    function closeModal(overlayId) {
+        document.getElementById(overlayId).classList.remove('active');
+    }
+</script>
