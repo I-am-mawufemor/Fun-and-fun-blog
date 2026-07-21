@@ -1,7 +1,8 @@
 <?php
 
 /** @var array $categories **/
-$page_title = "Create Post | " . APP_NAME;
+/** @var array $post **/
+$page_title = "Edit Post | " . APP_NAME;
 require_once __DIR__ . "/../../../include/header.php";
 require_once __DIR__ . "/../../../include/navbar.php";
 generateCSRF();
@@ -13,10 +14,10 @@ generateCSRF();
             <div class="main-layout">
                 <div class="layout-card">
                     <div class="layout-content">
-                        <form action="?page=store-post" method="POST" class="layout-form" id="categoryForm">
+                        <form action="?page=update-post&id=<?= htmlspecialchars($_GET['id'] ?? '') ?>" method="POST" class="layout-form" id="categoryForm">
                             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']); ?>">
 
-                            <h2 class="layout-title">Create Post</h2>
+                            <h2 class="layout-title">Edit Post</h2>
 
                             <div id="feedback" class="alert"></div>
 
@@ -27,19 +28,20 @@ generateCSRF();
                                     id="post_title"
                                     name="post_title"
                                     placeholder="Enter post title"
+                                    value="<?= htmlspecialchars($_POST['post_title'] ?? $post['title'] ?? '') ?>"
                                     required>
                             </div>
 
                             <div class="layout-form-group">
                                 <label for="category_id">Category <span class="req">*</span></label>
                                 <select id="category_id" name="category_id" required>
-                                    <option value="" disabled <?= empty($_POST['category_id']) ? 'selected' : '' ?>>
+                                    <option value="" disabled <?= empty($_POST['category_id'] ?? $post['category_id'] ?? '') ? 'selected' : '' ?>>
                                         Select a category
                                     </option>
                                     <?php foreach ($categories as $category): ?>
                                         <option
                                             value="<?= htmlspecialchars($category['id']) ?>"
-                                            <?= (isset($_POST['category_id']) && $_POST['category_id'] == $category['id']) ? 'selected' : '' ?>>
+                                            <?= ($_POST['category_id'] ?? $post['category_id'] ?? '') == $category['id'] ? 'selected' : '' ?>>
                                             <?= htmlspecialchars($category['name']) ?>
                                         </option>
                                     <?php endforeach; ?>
@@ -48,9 +50,9 @@ generateCSRF();
                             <div class="layout-form-group">
                                 <label for="status">Status</label>
                                 <select id="status" name="status">
-                                    <option value="draft" <?= (($_POST['status'] ?? 'draft') === 'draft') ? 'selected' : '' ?>>Draft</option>
-                                    <option value="published" <?= (($_POST['status'] ?? '') === 'published') ? 'selected' : '' ?>>Published</option>
-                                    <option value="archived" <?= (($_POST['status'] ?? '') === 'archived') ? 'selected' : '' ?>>Archived</option>
+                                    <option value="draft" <?= (($_POST['status'] ?? $post['status'] ?? 'draft') === 'draft') ? 'selected' : '' ?>>Draft</option>
+                                    <option value="published" <?= (($_POST['status'] ?? $post['status'] ?? '') === 'published') ? 'selected' : '' ?>>Published</option>
+                                    <option value="archived" <?= (($_POST['status'] ?? $post['status'] ?? '') === 'archived') ? 'selected' : '' ?>>Archived</option>
                                 </select>
                             </div>
 
@@ -64,7 +66,7 @@ generateCSRF();
                                     rows="16"
                                     placeholder="Write your full post here…"
                                     maxlength="20000"
-                                    required><?php echo htmlspecialchars($_POST['body'] ?? '', ENT_QUOTES, 'UTF-8'); ?></textarea>
+                                    required><?= htmlspecialchars($_POST['body'] ?? $post['content'] ?? '', ENT_QUOTES, 'UTF-8') ?></textarea>
                                 <div class="char-row">
                                     <span class="field-hint">Max 20,000 characters</span>
                                     <span class="char-count" id="charCount">0 / 20,000</span>
@@ -72,7 +74,7 @@ generateCSRF();
                             </div>
 
                             <button type="submit" name="save" class="login-btn" id="submitBtn">
-                                Create Post
+                                Update Post
                             </button>
                         </form>
                     </div>
@@ -105,6 +107,6 @@ generateCSRF();
         }
 
         body.addEventListener('input', updateCount);
-        updateCount(); // run once on load in case of repopulated value after a failed submit
+        updateCount(); // run once on load to reflect either the existing post content or a repopulated value after a failed submit
     });
 </script>

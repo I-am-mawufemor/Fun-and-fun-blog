@@ -113,7 +113,7 @@ switch ($page) {
         $userController->login();
         break;
 
-    case 'posts':
+    case 'blog':
         $postController->index();
         break;
 
@@ -124,7 +124,39 @@ switch ($page) {
     case 'store-post':
         $postController->store();
         break;
-        
+
+    case 'blog-post':
+        $slug = $_GET['slug'] ?? '';
+        $postController->show($slug);
+        break;
+
+    case 'update-post-status':
+        $postController->updateStatus();
+        break;
+
+        case 'edit-post':
+        $id = filter_var($_GET['id'] ?? null, FILTER_VALIDATE_INT);
+        if ($id === false || $id === null) {
+            $_SESSION['error'] = "Invalid post ID.";
+            header("Location: ?page=blog");
+            exit;
+        }
+        $postController->edit($id);
+        break;
+
+        case 'update-post':
+        $id = filter_var($_GET['id'] ?? null, FILTER_VALIDATE_INT);
+        if ($id === false || $id === null) {
+            $_SESSION['error'] = "Invalid post ID.";
+            header("Location: ?page=blog");
+            exit;
+        }
+        $postController->update($id);
+        break;
+
+    case 'error-404':
+        require ROOT . '/app/view/error/404.php';
+        break;
 
     default:
         http_response_code(404);

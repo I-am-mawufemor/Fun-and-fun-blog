@@ -46,10 +46,9 @@
                 <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">&times;</a>
                 <a href="#">About</a>
                 <a href="#">Services</a>
-                <a href="#">Clients</a>
-                <a href="#">Contact</a>
+                <a href="?page=blog">Blog</a>
+                <a href="?page=teachers-pack">Teacher Toolkit</a>
                 <?php if (isLoggedIn()): ?>
-                     <a href="?page=create-categories">Category</a>
                     <a href="?page=logout">Logout</a>
                 <?php endif; ?>
 

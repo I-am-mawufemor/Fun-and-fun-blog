@@ -1,0 +1,341 @@
+/* ==========================================================================
+   TechAndFun Blog — stylesheet
+   Design language: a learning log, not a magazine. The signature motif is
+   "progress" — a fill-bar borrowed from course-completion UI — used on card
+   hover (listing) and on scroll (single post), tying the blog visually back
+   to the rest of the e-learning platform.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap');
+
+:root {
+  --color-paper: #F3F4F8;
+  --color-paper-raised: #FFFFFF;
+  --color-ink: #1B2340;
+  --color-amber: #F5A623;
+  --color-teal: #0F6B66;
+  --color-slate: #6B7280;
+  --color-line: #E2E4EA;
+
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+
+  --radius: 14px;
+  --max-width: 1080px;
+}
+
+* { box-sizing: border-box; }
+
+body.blog {
+  margin: 0;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+.blog-container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* ---------- Masthead ---------- */
+
+.blog-masthead {
+  padding: 72px 0 40px;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.blog-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-teal);
+  margin: 0 0 12px;
+}
+
+.blog-title {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-weight: 600;
+  font-size: clamp(2.2rem, 5vw, 3.4rem);
+  line-height: 1.05;
+  margin: 0 0 14px;
+  max-width: 16ch;
+}
+
+.blog-subtitle {
+  font-size: 17px;
+  color: var(--color-slate);
+  max-width: 52ch;
+  margin: 0;
+}
+
+/* ---------- Category filter chips ---------- */
+
+.blog-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 28px 0;
+}
+
+.blog-filter {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  text-decoration: none;
+  color: var(--color-ink);
+  background: var(--color-paper-raised);
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  padding: 7px 14px;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.blog-filter:hover { border-color: var(--color-teal); color: var(--color-teal); }
+
+.blog-filter.is-active {
+  background: var(--color-ink);
+  border-color: var(--color-ink);
+  color: #fff;
+}
+
+/* ---------- Post grid & cards ---------- */
+
+.blog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 22px;
+  padding: 4px 0 64px;
+}
+
+.post-card {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-paper-raised);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius);
+  padding: 22px 22px 20px;
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.post-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 28px rgba(27, 35, 64, 0.08);
+}
+
+/* the signature: a progress fill that grows on hover, like a lesson
+   completing. Sits flush at the bottom edge of the card. */
+.post-card::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: 0%;
+  background: linear-gradient(90deg, var(--color-teal), var(--color-amber));
+  transition: width 0.4s ease;
+}
+
+.post-card:hover::after { width: 100%; }
+
+.post-card__tag {
+  align-self: flex-start;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--color-teal);
+  background: rgba(15, 107, 102, 0.08);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.post-card__title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.28rem;
+  line-height: 1.25;
+  margin: 0;
+}
+
+.post-card__excerpt {
+  font-size: 14.5px;
+  color: var(--color-slate);
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.post-card__meta {
+  margin-top: auto;
+  padding-top: 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-slate);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.post-card__meta span:not(:last-child)::after {
+  content: '·';
+  margin-left: 10px;
+  color: var(--color-line);
+}
+
+/* ---------- Empty state ---------- */
+
+.blog-empty {
+  padding: 60px 0;
+  text-align: center;
+  color: var(--color-slate);
+  font-family: var(--font-mono);
+  font-size: 14px;
+}
+
+/* ---------- Pagination ---------- */
+
+.blog-pagination {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding-bottom: 72px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.blog-pagination a, .blog-pagination span {
+  min-width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--color-ink);
+  border: 1px solid transparent;
+}
+
+.blog-pagination a:hover { border-color: var(--color-line); }
+.blog-pagination .is-current { background: var(--color-ink); color: #fff; }
+
+/* ==========================================================================
+   Single post
+   ========================================================================== */
+
+.progress-rail {
+  position: fixed;
+  top: 0; left: 0;
+  height: 3px;
+  width: 100%;
+  background: transparent;
+  z-index: 50;
+}
+
+.progress-rail__fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--color-teal), var(--color-amber));
+}
+
+.post-header {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 88px 24px 32px;
+}
+
+.post-header__tag {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-teal);
+}
+
+.post-header__title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(2rem, 4.5vw, 2.9rem);
+  line-height: 1.1;
+  margin: 14px 0 18px;
+}
+
+.post-header__meta {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--color-slate);
+  display: flex;
+  gap: 10px;
+  border-top: 1px solid var(--color-line);
+  padding-top: 16px;
+}
+
+.post-header__meta span:not(:last-child)::after {
+  content: '·';
+  margin-left: 10px;
+  color: var(--color-line);
+}
+
+.post-body {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 24px 48px;
+  font-size: 17.5px;
+  color: #2A3352;
+}
+
+.post-body p { margin: 0 0 20px; }
+.post-body h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.5rem;
+  margin: 40px 0 16px;
+}
+.post-body img { max-width: 100%; border-radius: 10px; margin: 8px 0 24px; }
+.post-body a { color: var(--color-teal); }
+.post-body blockquote {
+  margin: 28px 0;
+  padding-left: 18px;
+  border-left: 3px solid var(--color-amber);
+  color: var(--color-slate);
+  font-style: italic;
+}
+.post-body code {
+  font-family: var(--font-mono);
+  background: #ECEEF3;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.post-footer {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 24px 80px;
+  border-top: 1px solid var(--color-line);
+}
+
+.post-footer__back {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--color-ink);
+  text-decoration: none;
+}
+.post-footer__back:hover { color: var(--color-teal); }
+
+@media (max-width: 640px) {
+  .blog-masthead { padding: 48px 0 28px; }
+  .post-header { padding: 56px 20px 24px; }
+}

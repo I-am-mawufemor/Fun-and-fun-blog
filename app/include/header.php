@@ -30,6 +30,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
     <!-- custom css -->
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>public/style/style.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>public/style/blog.css?v=<?php echo time(); ?>">
 
     <!-- ionic icons -->
     <script type="module" src="https://unpkg.com/ionicons@7/dist/ionicons/ionicons.esm.js"></script>
@@ -38,6 +39,7 @@ if (session_status() === PHP_SESSION_NONE) {
     <script src="<?php echo BASE_URL; ?>public/js/main.js" defer></script>
     <script src="<?php echo BASE_URL; ?>public/js/script.js" defer></script>
      <script src="<?php echo BASE_URL; ?>public/js/feedback.js" defer></script>
+     <script src="<?php echo BASE_URL; ?>public/js/blog.js" defer></script>
      <!-- Latest intl-tel-input CSS -->
     <link rel="stylesheet"
         href="https://cdn.jsdelivr.net/npm/intl-tel-input@25.3.1/build/css/intlTelInput.css">
