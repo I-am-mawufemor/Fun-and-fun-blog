@@ -48,7 +48,7 @@ generateCSRF();
             </button>
 
             <p class="forgot-password">
-                <a href="?page=password-recovery">Forgot Password?</a>
+                <a href="?page=forgot-password">Forgot Password?</a>
             </p>
 
         </form>

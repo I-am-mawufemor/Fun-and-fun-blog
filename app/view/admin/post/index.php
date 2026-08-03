@@ -46,21 +46,21 @@ generateCSRF();
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($getAllPosts as $_POST): ?>
+                                <?php foreach ($getAllPosts as $post): ?>
                                     <tr>
-                                        <td><?= htmlspecialchars($_POST['id']); ?></td>
-                                        <td><?= htmlspecialchars($_POST['title']); ?></td>
-                                        <td><?= htmlspecialchars($_POST['author_name']); ?></td>
-                                         <td><?= htmlspecialchars($_POST['status']); ?></td>
-                                        <td><?= date('F j, Y', strtotime($_POST['created_at'])); ?></td>
+                                        <td><?= htmlspecialchars($post['id']); ?></td>
+                                        <td><?= htmlspecialchars($post['title']); ?></td>
+                                        <td><?= htmlspecialchars($post['author_name']); ?></td>
+                                        <td><?= htmlspecialchars($post['status']); ?></td>
+                                        <td><?= date('F j, Y', strtotime($post['created_at'])); ?></td>
                                         <td>
                                             <div class="table-actions">
-                                                <a href="?page=edit-post&id=<?= htmlspecialchars($_POST['id']); ?>" class="btn btn-edit">Edit</a>
+                                                <a href="?page=edit-post&id=<?= htmlspecialchars($post['id']); ?>" class="btn btn-edit">Edit</a>
 
                                                 <button
                                                     type="button"
                                                     class="btn btn-delete"
-                                                    onclick="openDeleteModal('<?= htmlspecialchars($_POST['id']); ?>', '<?= htmlspecialchars($_POST['title'], ENT_QUOTES); ?>')">
+                                                    onclick="openDeleteModal('<?= htmlspecialchars($post['id']); ?>', '<?= htmlspecialchars($post['title'], ENT_QUOTES); ?>')">
                                                     Delete
                                                 </button>
                                             </div>
@@ -93,12 +93,12 @@ generateCSRF();
             <button type="button" class="modal-close" onclick="closeModal('deleteModalOverlay')">✕</button>
         </div>
 
-        <form id="deleteCategoryForm" action="" method="POST">
+        <form id="deletePostForm" action="" method="POST">
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']); ?>">
 
             <div class="modal-body">
                 <p class="delete-msg">
-                    Are you sure you want to delete <strong id="delete_category_name"></strong>?
+                    Are you sure you want to delete <strong id="delete_post_name"></strong>?
                     This action cannot be undone.
                 </p>
             </div>
@@ -112,9 +112,9 @@ generateCSRF();
 
 <script>
     function openDeleteModal(id, name) {
-        const form = document.getElementById('deleteCategoryForm');
-        form.action = '?page=delete-category&id=' + encodeURIComponent(id);
-        document.getElementById('delete_category_name').textContent = name;
+        const form = document.getElementById('deletePostForm');
+        form.action = '?page=delete-post&id=' + encodeURIComponent(id);
+        document.getElementById('delete_post_name').textContent = name;
         document.getElementById('deleteModalOverlay').classList.add('active');
     }
 
@@ -122,4 +122,3 @@ generateCSRF();
         document.getElementById(overlayId).classList.remove('active');
     }
 </script>
-

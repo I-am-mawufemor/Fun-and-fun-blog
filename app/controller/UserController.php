@@ -39,8 +39,12 @@ class UserController
 
             $allowedGenders = ['male', 'female', 'other'];
 
-            if (empty($fullName)) {
-                $error = "Full name is required.";
+            if (
+                strlen($fullName) < 2 ||
+                strlen($fullName) > 100 ||
+                !preg_match("/^[a-zA-Z]+(?:[' -][a-zA-Z]+)*$/", $fullName)
+            ) {
+                $error = "Please enter a valid full name (letters, spaces, hyphens, and apostrophes only).";
             } elseif (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $error = "A valid email address is required.";
             } elseif (empty($telephone)) {

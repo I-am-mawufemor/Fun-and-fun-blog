@@ -1,176 +1,224 @@
 <?php
 
+namespace Mawufemor\Techandfun\controller;
+
 use Mawufemor\Techandfun\model\User;
+use Mawufemor\Techandfun\services\NotificationServices;
 
 if (!defined('ROOT')) {
     die("Direct access not allowed");
 }
 
+use PDO;
 
 class AuthController
 {
-    public function __construct(private PDO $pdo) {}
+    private User $userModel;
+    private NotificationServices $notificationService;
 
-    public function login(): void
+    public function __construct(private PDO $pdo)
+    {
+        $this->userModel = new User($this->pdo);
+        $this->notificationService = new NotificationServices();
+    }
+
+    public function forgotPassword(): void
     {
         if (isLoggedIn()) {
             header('Location: ?page=home');
             exit();
         }
 
-        $error = '';
-
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $email    = trim($_POST['email']    ?? '');
-            $password =      $_POST['password'] ?? '';
-
-            if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $error = "Invalid email or password.";
-            } else {
-                $userModel = new User($this->pdo);   // pass DB, not email
-                $user      = $userModel->getUser($email);
-
-                if ($user !== null && password_verify($password, $user['password'])) {
-                    session_regenerate_id(true);
-
-                    $_SESSION['user_id']   = $user['id'];
-                    $_SESSION['email']     = $email;
-                    $_SESSION['full_name'] = $user['full_name'];
-                    $_SESSION['role']      = $user['role'];
-
-                    $redirect = $user['role'] === 'admin' ? 'admin-dashboard' : 'home';
-                    header("Location: ?page=$redirect");
-                    exit();
-                }
-
-                // Same message whether email or password was wrong
-                $error = "Invalid email or password.";
-            }
+        header('Content-Type: application/json');
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['success' => false, 'message' => 'Method Not Allowed']);
+            exit;
         }
 
-        // Renders on GET, and on POST when validation fails
-        require ROOT . '/app/Views/login.php';
-    }
+        validateCSRF($_POST['csrf_token'] ?? '');
 
-
-    public function logout(): void
-    {
-        $_SESSION = [];
-
-        if (ini_get("session.use_cookies")) {
-            $params = session_get_cookie_params();
-            setcookie(
-                session_name(),
-                '',
-                time() - 42000,
-                $params['path'],
-                $params['domain'],
-                $params['secure'],
-                $params['httponly']
-            );
-        }
-
-        session_destroy();
-        header('Location: ?page=login');
-        exit();
-    }
-
-public function verifyEmail(): void
-{
-    // This page is for users who are NOT logged in
-    if (isLoggedIn()) {
-        header('Location: ?page=home');
-        exit();
-    }
-
-    $error   = '';
-    $success = false;
-
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $email = trim($_POST['email'] ?? '');
 
         if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $error = "Please enter a valid email address.";
-        } else {
-            $userModel = new User($this->pdo);  
-            $user = $userModel->getUser($email);
-            if ($user !== null) {
-                // Generate a cryptographically secure random token
-                $token   = bin2hex(random_bytes(32)); // 64 char hex string
-                $expiry  = date('Y-m-d H:i:s', time() + 3600); // 1 hour
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Email is required']);
+            exit;
+        }
 
-                $userModel->saveResetToken($user['id'], $token, $expiry);
 
-                // Send the email — use your mailer of choice here
-                $resetLink = "https://yoursite.com/?page=change-password&token=$token";
-                mail(
-                    $email,
-                    "Password reset request",
-                    "Click the link below to reset your password.\n\n$resetLink\n\nThis link expires in 1 hour."
+        $_SESSION['reset_email'] = $email;
+
+        if ($this->userModel->isRequestLocked($email)) {
+            http_response_code(429);
+            echo json_encode(['success' => false, 'message' => 'Too many reset requests. Please try again later.']);
+            exit;
+        }
+
+        $user = $this->userModel->getUser($email);
+
+        if ($user) {
+            $userId = $user['id'];
+            $phone  = $user['telephone'];
+            $name   = $user['full_name'];
+
+            $rawToken  = bin2hex(random_bytes(32));
+            $tokenHash = hash('sha256', $rawToken);
+            $otpCode   = (string) random_int(100000, 999999);
+            $expiresAt = date('Y-m-d H:i:s', strtotime('+30 minutes'));
+
+            $this->userModel->saveResetToken($userId, $tokenHash, $otpCode, $expiresAt);
+            $this->userModel->recordResetRequest($email);
+
+            $resetLink = "https://techandfun.com/reset-password?token=$rawToken";
+
+            $emailSubject = "Password Reset Request";
+            $emailMessage = "Hello $name,<br><br>We received a request to reset your password. Please click <a href=\"$resetLink\">here</a> to reset your password.";
+            $this->notificationService->sendEmail($email, $emailSubject, $emailMessage);
+
+            $smsMessage = "Hello $name, your password reset OTP is: $otpCode. It will expire in 30 minutes.";
+            $this->notificationService->sendSMS($phone, $smsMessage);
+        }
+
+        echo json_encode(['success' => true, 'message' => 'If an account exists for that email, reset instructions have been sent.']);
+        exit;
+    }
+
+    public function verfytoken(): void
+    {
+        if (isLoggedIn()) {
+            header('Location: ?page=home');
+            exit;
+        }
+
+        header('Content-Type: application/json');
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['success' => false, 'message' => 'Method Not Allowed']);
+            exit;
+        }
+
+        validateCSRF($_POST['csrf_token'] ?? '');
+
+        $email   = $_SESSION['reset_email'] ?? '';
+        $otpCode = trim($_POST['otpCode'] ?? '');
+
+        if (empty($email)) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Reset session expired. Please start again.']);
+            exit;
+        }
+
+        if (empty($otpCode)) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'One Time Password is required']);
+            exit;
+        }
+
+        try {
+            if ($this->userModel->isResetLockedByEmail($email)) {
+                http_response_code(429);
+                echo json_encode(['success' => false, 'message' => 'Too many failed attempts. Please request a new code.']);
+                exit;
+            }
+
+            $resetRow = $this->userModel->getResetTokenByOtp($email, $otpCode);
+
+            if (!$resetRow) {
+                $this->userModel->incrementAttemptsByEmail($email);
+                http_response_code(403);
+                echo json_encode(['success' => false, 'message' => 'Invalid or expired code.']);
+                exit;
+            }
+
+            $_SESSION['reset_user_id']  = $resetRow['user_id'];
+            $_SESSION['reset_token_id'] = $resetRow['id'];
+
+            echo json_encode(['success' => true, 'message' => 'Code verified.']);
+            exit;
+        } catch (\PDOException $e) {
+            error_log('OTP verification failed: ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'A database error occurred.']);
+            exit;
+        }
+    }
+    public function resetPassword(): void
+    {
+        // Must have completed OTP verification first — no session, no access.
+        if (empty($_SESSION['reset_user_id']) || empty($_SESSION['reset_token_id'])) {
+            header('Location: ?page=forgot-password');
+            exit;
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            require ROOT . '/app/view/auth/reset_password.php';
+            return;
+        }
+
+        header('Content-Type: application/json');
+
+        validateCSRF($_POST['csrf_token'] ?? '');
+
+        $userId  = (int) $_SESSION['reset_user_id'];
+        $tokenId = (int) $_SESSION['reset_token_id'];
+
+        $password        = $_POST['password'] ?? '';
+        $confirmPassword = $_POST['confirm_password'] ?? '';
+
+        if (strlen($password) < 8) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Password must be at least 8 characters.']);
+            exit;
+        }
+
+        if ($password !== $confirmPassword) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Passwords do not match.']);
+            exit;
+        }
+
+        try {
+
+            // Re-check the token is STILL valid right now 
+            $resetRow = $this->userModel->getValidResetToken($tokenId, $userId);
+
+            if (!$resetRow) {
+                unset($_SESSION['reset_user_id'], $_SESSION['reset_token_id'], $_SESSION['reset_email']);
+                http_response_code(403);
+                echo json_encode(['success' => false, 'message' => 'Your reset session has expired. Please start again.']);
+                exit;
+            }
+
+            $hash = password_hash($password, PASSWORD_DEFAULT);
+
+            $this->userModel->updatePassword($userId, $hash);
+
+            // Burn every outstanding reset token for this user, not just this one 
+            $this->userModel->invalidateAllResetTokens($userId);
+
+            $user = $this->userModel->getUserById($userId); 
+            if ($user) {
+                $this->notificationService->sendEmail(
+                    $user['email'],
+                    'Your password was changed',
+                    "Hello {$user['full_name']},<br><br>Your password was just reset. If this wasn't you, please contact support immediately."
                 );
             }
 
-            // Same message regardless — prevents email enumeration
-            $success = true;
+            // Clear reset flow session state now that the reset is complete.
+            unset($_SESSION['reset_user_id'], $_SESSION['reset_token_id'], $_SESSION['reset_email']);
+
+            // Regenerate the session ID. 
+            session_regenerate_id(true);
+
+            echo json_encode(['success' => true, 'message' => 'Your password has been reset. Please log in.']);
+            exit;
+        } catch (\PDOException $e) {
+            error_log('Password reset failed: ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'A database error occurred.']);
+            exit;
         }
     }
-
-    require ROOT . '/app/Views/verifyEmail.php';
 }
-
-
-public function changePassword(): void
-{
-    // This page is for users who are NOT logged in — they have a token
-    if (isLoggedIn()) {
-        header('Location: ?page=home');
-        exit();
-    }
-
-    // The token must be present in the URL
-    $token = trim($_GET['token'] ?? '');
-
-    if (empty($token)) {
-        header('Location: ?page=login');
-        exit();
-    }
-
-    // Validate the token before showing the form at all
-    $userModel = new User($this->pdo);  
-    $resetRecord = $userModel->getResetToken($token);
-
-    if ($resetRecord === null) {
-        // Token is invalid, expired, or already used
-        $error = "This reset link is invalid or has expired. Please request a new one.";
-        require ROOT . '/app/Views/changePassword.php';
-        return;
-    }
-
-    $error   = '';
-    $success = false;
-
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $newPassword = $_POST['new_password']     ?? '';
-        $confirm     = $_POST['confirm_password'] ?? '';
-
-        if ($newPassword !== $confirm) {
-            $error = "Passwords do not match.";
-        } elseif (strlen($newPassword) < 8) {
-            $error = "Password must be at least 8 characters.";
-        } else {
-            $newHash = password_hash($newPassword, PASSWORD_DEFAULT);
-            $updated = $userModel->updatePassword($newHash, $resetRecord['user_id']);
-
-            if ($updated) {
-                // Invalidate the token so it cannot be used again
-                $userModel->markTokenUsed($resetRecord['id']);
-                $success = true;
-            } else {
-                $error = "Could not update password. Please try again.";
-            }
-        }
-    }
-
-    require ROOT . '/app/Views/changePassword.php';
-}
-    }

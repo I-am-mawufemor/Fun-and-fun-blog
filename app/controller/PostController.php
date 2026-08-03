@@ -5,6 +5,7 @@ namespace Mawufemor\Techandfun\Controller;
 use Mawufemor\Techandfun\helpers\SlugHelper;
 use Mawufemor\Techandfun\model\Post;
 use Mawufemor\Techandfun\model\Category;
+use Mawufemor\Techandfun\controller\CommentController;
 
 if (!defined('ROOT')) {
     die("Direct access not allowed");
@@ -16,11 +17,13 @@ class PostController
 {
     private Post $postModel;
     private Category $categoryModel;
+    private CommentController $commentController;
 
     public function __construct(private PDO $pdo)
     {
         $this->postModel = new Post($this->pdo);
         $this->categoryModel = new Category($this->pdo);
+        $this->commentController = new CommentController($this->pdo);
     }
 
     public function getPostModel(): Post
@@ -169,6 +172,8 @@ class PostController
             require ROOT . '/app/view/errors/404.php';
             exit;
         }
+
+        $comments = $this->commentController->getCommentsByPostId($post['id']);
 
         require ROOT . '/app/view/public/post/show.php';
     }
@@ -327,6 +332,45 @@ class PostController
             echo json_encode(['success' => false, 'message' => 'A database error occurred.']);
         }
 
+        exit;
+    }
+
+    // delete post
+    public function delete(int $id): void
+    {
+        requireLogin();
+        requireRole('admin');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            exit('Invalid request method.');
+        }
+
+        if (!validateCSRF($_POST['csrf_token'] ?? '')) {
+            $_SESSION['error'] = "Invalid CSRF token.";
+            header('Location: ?page=blog');
+            exit;
+        }
+
+        $post = $this->postModel->getPostById($id);
+        if (!$post) {
+            $_SESSION['error'] = "Post not found.";
+            header("Location: ?page=blog");
+            exit;
+        }
+
+        try {
+            if ($this->postModel->deletePost($id)) {
+                $_SESSION['success'] = "Post deleted successfully.";
+            } else {
+                $_SESSION['error'] = "Failed to delete post.";
+            }
+        } catch (\PDOException $e) {
+            error_log('Post delete failed: ' . $e->getMessage());
+            $_SESSION['error'] = "Failed to delete post — it may still have related content (comments, etc.) attached.";
+        }
+
+        header('Location: ?page=blog');
         exit;
     }
 }

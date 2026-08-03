@@ -1,6 +1,6 @@
 <?php
 
-namespace Mawufemor\Techandfun\Model;
+namespace Mawufemor\Techandfun\model;
 
 if (!defined('ROOT')) {
     die("Direct access not allowed");
@@ -183,4 +183,13 @@ class Post
 
     return $stmt->rowCount() > 0;
 }
+
+public function deletePost(int $id): bool
+    {
+        $stmt = $this->pdo->prepare("DELETE FROM posts WHERE id = :id");
+        
+        $stmt->execute(['id' => $id]);
+        
+         return $stmt->rowCount() > 0;
+    }
 }

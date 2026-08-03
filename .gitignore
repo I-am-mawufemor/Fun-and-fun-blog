@@ -1,0 +1,11 @@
+# Environment variables
+.env
+
+# Composer
+/vendor/
+
+# OS/editor junk
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

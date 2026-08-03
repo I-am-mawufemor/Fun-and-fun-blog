@@ -17,10 +17,15 @@ require_once ROOT . '/app/security/csrf.php';
 require_once ROOT . '/app/config/config.php';
 require_once ROOT . '/app/controller/UserController.php';
 
+$dotenv = Dotenv\Dotenv::createImmutable(ROOT);
+$dotenv->load();
+
 use Mawufemor\Techandfun\controller\UserController;
 use Mawufemor\Techandfun\controller\CategoryController;
 use Mawufemor\Techandfun\controller\PostController;
-
+use Mawufemor\Techandfun\controller\HomeController;
+use Mawufemor\Techandfun\controller\CommentController;
+use Mawufemor\Techandfun\controller\AuthController;
 
 $pdo = Database::getInstance();
 
@@ -28,6 +33,9 @@ $pdo = Database::getInstance();
 $userController = new UserController($pdo);
 $categoryController = new CategoryController($pdo);
 $postController = new PostController($pdo);
+$homeController = new HomeController($pdo);
+$commentController = new CommentController($pdo);
+$authController = new AuthController($pdo);
 
 
 // function to check if user is logged in
@@ -46,7 +54,7 @@ $page = $_GET['page'] ?? 'home';
 
 switch ($page) {
     case 'home':
-        require ROOT . '/app/view/public/home.php';
+        $homeController->index();
         break;
     case 'login':
         $userController->login();
@@ -134,7 +142,7 @@ switch ($page) {
         $postController->updateStatus();
         break;
 
-        case 'edit-post':
+    case 'edit-post':
         $id = filter_var($_GET['id'] ?? null, FILTER_VALIDATE_INT);
         if ($id === false || $id === null) {
             $_SESSION['error'] = "Invalid post ID.";
@@ -144,7 +152,7 @@ switch ($page) {
         $postController->edit($id);
         break;
 
-        case 'update-post':
+    case 'update-post':
         $id = filter_var($_GET['id'] ?? null, FILTER_VALIDATE_INT);
         if ($id === false || $id === null) {
             $_SESSION['error'] = "Invalid post ID.";
@@ -153,6 +161,52 @@ switch ($page) {
         }
         $postController->update($id);
         break;
+
+    case 'delete-post':
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            exit('Invalid request method.');
+        }
+
+        $id = filter_var($_GET['id'] ?? null, FILTER_VALIDATE_INT);
+        if ($id === false || $id === null) {
+            $_SESSION['error'] = "Invalid post ID.";
+            header("Location: ?page=blog");
+            exit;
+        }
+        $postController->delete($id);
+        break;
+
+    case 'submit-comment':
+        $postId = filter_var($_GET['post_id'] ?? null, FILTER_VALIDATE_INT);
+        if (!$postId) {
+            $_SESSION['error'] = "Invalid post ID.";
+            header("Location: ?page=blog");
+            exit;
+        }
+        $commentController->createComment($postId, $_POST['content'] ?? '');
+        break;
+
+    case 'forgot-password':
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $authController->forgotPassword();
+        } else {
+            require ROOT . '/app/view/auth/forgot_password.php';
+        }
+        break;
+
+    case 'verify-reset-code':
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $authController->verfytoken();
+        } else {
+            require ROOT . '/app/view/auth/verify_otp.php';
+        }
+        break;
+
+    case 'resetPassword':
+        $authController->resetPassword();
+        break;
+
 
     case 'error-404':
         require ROOT . '/app/view/error/404.php';

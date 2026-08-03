@@ -17,7 +17,7 @@ class User
     public function getUser(string $email): ?array
     {
         $stmt = $this->pdo->prepare(
-            "SELECT id, full_name, password, role FROM users WHERE email = ? LIMIT 1"
+            "SELECT id, full_name, telephone, password, role FROM users WHERE email = ? LIMIT 1"
         );
 
         $stmt->execute([$email]);
@@ -27,16 +27,14 @@ class User
         return $user ?: null;
     }
 
-    // method to reset password
-    public function updatePassword(string $newHash, int $userId): bool
+    public function getUserById(int $userId): ?array
     {
         $stmt = $this->pdo->prepare(
-            "UPDATE users SET password = ? WHERE user_id = ?"
+            "SELECT id, full_name, email, telephone, gender, role FROM users WHERE id = ?"
         );
+        $stmt->execute([$userId]);
 
-        $stmt->execute([$newHash, $userId]);
-
-        return true;
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     }
 
     // method to fetch password
@@ -54,48 +52,156 @@ class User
     }
 
     // Store a reset token against a user
-    public function saveResetToken(int $userId, string $token, string $expiry): bool
+    public function saveResetToken(int $userId, string $tokenHash, string $otpCode, string $expiry): bool
     {
-        // Invalidate any existing unused tokens for this user first
-        $del = $this->pdo->prepare(
-            "DELETE FROM password_resets WHERE user_id = ?"
-        );
+        $del = $this->pdo->prepare("DELETE FROM password_resets WHERE user_id = ?");
         $del->execute([$userId]);
 
         $stmt = $this->pdo->prepare(
-            "INSERT INTO password_resets (user_id, token, expires_at)
-             VALUES (?, ?, ?)"
+            "INSERT INTO password_resets (user_id, token_hash, otp_code, expires_at)
+         VALUES (?, ?, ?, ?)"
         );
 
-        $stmt->execute([$userId, $token, $expiry]);
-
-        return true;
+        return $stmt->execute([$userId, $tokenHash, $otpCode, $expiry]);
     }
 
-    // Look up a valid (unused, unexpired) token
-    public function getResetToken(string $token): ?array
+
+    public function incrementAttemptsByEmail(string $email): void
     {
         $stmt = $this->pdo->prepare(
-            "SELECT id, user_id, expires_at FROM password_resets
-             WHERE token = ? AND used = 0 AND expires_at > NOW()
-             LIMIT 1"
+            "UPDATE password_resets pr
+         JOIN users u ON u.id = pr.user_id
+         SET pr.attempts = pr.attempts + 1
+         WHERE u.email = ?
+         AND pr.used = 0
+         AND pr.expires_at > NOW()"
         );
+        $stmt->execute([$email]);
+    }
 
-        $stmt->execute([$token]);
-
+    // Check whether the current active reset record has exceeded the allowed attempts
+    public function isResetLockedByEmail(string $email, int $maxAttempts = 5): bool
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT pr.attempts FROM password_resets pr
+         JOIN users u ON u.id = pr.user_id
+         WHERE u.email = ?
+         AND pr.used = 0
+         AND pr.expires_at > NOW()
+         ORDER BY pr.created_at DESC
+         LIMIT 1"
+        );
+        $stmt->execute([$email]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        return $row ?: null;
+        return $row && $row['attempts'] >= $maxAttempts;
     }
 
-    // Mark the token as used so it cannot be replayed
-    public function markTokenUsed(int $tokenId): void
+    // Look up a valid, unlocked OTP, scoped to the user's email
+    public function getResetTokenByOtp(string $email, string $otpCode): ?array
     {
         $stmt = $this->pdo->prepare(
-            "UPDATE password_resets SET used = 1 WHERE id = ?"
+            "SELECT pr.id, pr.user_id FROM password_resets pr
+         JOIN users u ON u.id = pr.user_id
+         WHERE u.email = ?
+         AND pr.otp_code = ?
+         AND pr.used = 0
+         AND pr.expires_at > NOW()
+         LIMIT 1"
+        );
+        $stmt->execute([$email, $otpCode]);
+
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    // Check  throttle how often password resets can be REQUESTED (not guessed)
+    public function isRequestLocked(string $email, int $maxRequests = 5, int $windowHours = 24): bool
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT reset_request_count, reset_request_window_start
+         FROM users WHERE email = ?"
+        );
+        $stmt->execute([$email]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$row || !$row['reset_request_window_start']) {
+            return false;
+        }
+
+        $windowStart = new \DateTime($row['reset_request_window_start']);
+        $now         = new \DateTime();
+        $hoursElapsed = ($now->getTimestamp() - $windowStart->getTimestamp()) / 3600;
+
+        if ($hoursElapsed >= $windowHours) {
+            return false;
+        }
+
+        return $row['reset_request_count'] >= $maxRequests;
+    }
+
+    public function recordResetRequest(string $email, int $windowHours = 24): void
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT reset_request_count, reset_request_window_start
+         FROM users WHERE email = ?"
+        );
+        $stmt->execute([$email]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        $windowExpired = true;
+        if ($row && $row['reset_request_window_start']) {
+            $windowStart  = new \DateTime($row['reset_request_window_start']);
+            $now          = new \DateTime();
+            $hoursElapsed = ($now->getTimestamp() - $windowStart->getTimestamp()) / 3600;
+            $windowExpired = $hoursElapsed >= $windowHours;
+        }
+
+        if ($windowExpired) {
+            $stmt = $this->pdo->prepare(
+                "UPDATE users SET reset_request_count = 1, reset_request_window_start = NOW() WHERE email = ?"
+            );
+        } else {
+            $stmt = $this->pdo->prepare(
+                "UPDATE users SET reset_request_count = reset_request_count + 1 WHERE email = ?"
+            );
+        }
+
+        $stmt->execute([$email]);
+    }
+
+    // Re-verify the reset session is still valid at the moment of submission —
+    public function getValidResetToken(int $tokenId, int $userId): ?array
+    {
+        $stmt = $this->pdo->prepare(
+            "SELECT id, user_id FROM password_resets
+         WHERE id = ?
+         AND user_id = ?
+         AND used = 0
+         AND expires_at > NOW()
+         LIMIT 1"
+        );
+        $stmt->execute([$tokenId, $userId]);
+
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    public function updatePassword(int $userId, string $passwordHash): bool
+    {
+        $stmt = $this->pdo->prepare(
+            "UPDATE users SET password = ? WHERE id = ?"
         );
 
-        $stmt->execute([$tokenId]);
+        return $stmt->execute([$passwordHash, $userId]);
+    }
+
+    // Invalidate ALL outstanding reset tokens for this user once a reset completes
+
+    public function invalidateAllResetTokens(int $userId): void
+    {
+        $stmt = $this->pdo->prepare(
+            "UPDATE password_resets SET used = 1 WHERE user_id = ? AND used = 0"
+        );
+        $stmt->execute([$userId]);
     }
 
     // method to create user
@@ -105,7 +211,7 @@ class User
         string $telephone,
         string $gender,
         string $password,
-         string $role = 'user'  // default to 'user'
+        string $role = 'user'  // default to 'user'
     ): bool {
         $stmt = $this->pdo->prepare(
             "INSERT INTO users (full_name, email, telephone, gender, password, role)
@@ -116,11 +222,10 @@ class User
             $stmt->execute([$fullName, $email, $telephone, $gender, $password, $role]);
             return true;
         } catch (PDOException $e) {
-            // 23000 is the SQLSTATE code for duplicate entry
             if ($e->getCode() === '23000') {
-                return false; // duplicate email — let the controller handle the message
+                return false; 
             }
-            throw $e; // rethrow anything else unexpected
+            throw $e; 
         }
     }
 }
